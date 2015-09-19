@@ -32,12 +32,14 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 import com.google.atap.tango.ux.TangoUx;
 import com.google.atap.tango.ux.TangoUxLayout;
 import com.projecttango.tangoutils.renderables.PointCloud;
+import android.graphics.Color;
 
 
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -64,6 +66,7 @@ public class PointCloudActivity extends Activity {
     private TangoConfig mConfig;
     int maxDepthPoints;
     float currentDistance = 0;
+    float tmpCurDistBuffer;
 
     private TextView mAverageZTextView;
 
@@ -80,10 +83,12 @@ public class PointCloudActivity extends Activity {
     private TangoUxLayout mTangoUxLayout;
 
     private TextView banner;
+    private RelativeLayout mBackground;
 
     private static final int UPDATE_INTERVAL_MS = 100;
     public static Object poseLock = new Object();
     public static Object depthLock = new Object();
+
 
 
     /*
@@ -110,6 +115,8 @@ public class PointCloudActivity extends Activity {
         setTitle(R.string.app_name);
         banner = (TextView) findViewById(R.id.banner);
         banner.setText(R.string.close_msg);
+
+        mBackground = (RelativeLayout) findViewById(R.id.container);
 
         mTango = new Tango(this);
         mConfig = new TangoConfig();
@@ -304,9 +311,11 @@ public class PointCloudActivity extends Activity {
 
     private void updateGui(float distance) {
         // Update the background color
-        // TODO
-        // Update the text
+        int color = getColor(distance);
+        mBackground.setBackgroundColor(color);
 
+
+        // Update the text
         int text = R.string.far_msg;
         if (distance < 1) {
             text = R.string.close_msg;
@@ -331,14 +340,14 @@ public class PointCloudActivity extends Activity {
         try {
             mp.reset();
             AssetFileDescriptor afd;
-            afd = getAssets().openFd("White-Noise.mp3");
+            afd = getAssets().openFd("white-noise.wav");
             mp.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(),afd.getLength());
             mp.prepare();
-            mp.setLooping(true) // This may not work???
+            mp.setLooping(true); // This may not work???
             mp.start();
             int maxVolume = 5;
-            float log1=(float)(Math.log(maxVolume-distance)/Math.log(maxVolume));
-            mp.setVolume(1-log1);
+            float log1 = (float) (Math.log(maxVolume-distance)/Math.log(maxVolume));
+            //mp.setVolume(1-log1);
         } catch (IllegalStateException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -351,10 +360,10 @@ public class PointCloudActivity extends Activity {
         // We want to color to go from red to blue depending on the distance (0-240)
         if (distance > 5)
             distance = 5;
-        hue = distance * 240.0/5.0;
+        float hue = distance * 240.0f/5.0f;
         
-        float[] hsv = {hue, 1.0, 1.0};
-        return HSVToColor(hsv);
+        float[] hsv = {hue, 1.0f, 1.0f};
+        return Color.HSVToColor(hsv);
     }
 
 
