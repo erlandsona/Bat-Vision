@@ -346,6 +346,17 @@ public class PointCloudActivity extends Activity {
         }
     }
 
+    // generate a color based on the distance
+    private int getColor(float distance) {
+        // We want to color to go from red to blue depending on the distance (0-240)
+        if (distance > 5)
+            distance = 5;
+        hue = distance * 240.0/5.0;
+        
+        float[] hsv = {hue, 1.0, 1.0};
+        return HSVToColor(hsv);
+    }
+
 
     /**
      * Create a separate thread to update Log information on UI at the specified interval of
