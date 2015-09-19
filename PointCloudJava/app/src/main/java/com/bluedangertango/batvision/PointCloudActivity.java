@@ -73,6 +73,8 @@ public class PointCloudActivity extends Activity {
 
     MediaPlayer mp = null;
     boolean mediaReady = false;
+    float targetVolume = 0f;
+    float currentVolume = 0f;
 
     private int count;
     private int mPreviousPoseStatus;
@@ -122,6 +124,7 @@ public class PointCloudActivity extends Activity {
                 mediaReady = true;
                 mp.setLooping(true); // This may not work???
                 mp.start();
+                mp.setVolume(0, 0);
             }
         });
         banner = (TextView) findViewById(R.id.banner);
@@ -353,9 +356,26 @@ public class PointCloudActivity extends Activity {
             // 0 -> 1; 5 -> 0
             // 1 - (Math.min(distance,5))/maxDistance
             int maxDistance = 3;
-            float volume = 1 - (Math.min(distance, maxDistance)/maxDistance);
-            //Log.i("AUDIO", "Setting volume to "+volume+" (distance is "+distance+")");
-            mp.setVolume(volume, volume);
+            targetVolume = 1 - (Math.min(distance, maxDistance)/maxDistance);
+            Log.i("AUDIO", "Setting targetVolume to "+targetVolume+" (distance is "+distance+")");
+            float dv = 0.025f;
+            float diff = Math.abs(targetVolume - currentVolume);
+            int iterations = (int) (diff/dv);
+            if (targetVolume - currentVolume < 0) {
+              dv *= -1;
+            }
+
+            try {
+                for (int i = 0; i < iterations; i++) {
+                    currentVolume += dv;
+                    mp.setVolume(currentVolume, currentVolume);
+                    Thread.sleep(10);
+                }
+
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            mp.setVolume(targetVolume, targetVolume);
         } catch (IllegalStateException e) {
             e.printStackTrace();
         }
