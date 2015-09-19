@@ -47,8 +47,13 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+// Playing audio
+import android.media.MediaPlayer;
+import android.content.res.AssetFileDescriptor;
+
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.FloatBuffer;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 
@@ -67,31 +72,14 @@ public class PointCloudActivity extends Activity implements OnClickListener {
     private PCRenderer mRenderer;
     private GLSurfaceView mGLView;
 
-    private TextView mDeltaTextView;
-    private TextView mPoseCountTextView;
-    private TextView mPoseTextView;
-    private TextView mQuatTextView;
-    private TextView mPoseStatusTextView;
-    private TextView mTangoEventTextView;
-    private TextView mPointCountTextView;
-    private TextView mTangoServiceVersionTextView;
-    private TextView mApplicationVersionTextView;
     private TextView mAverageZTextView;
-    private TextView mFrequencyTextView;
 
-    private Button mFirstPersonButton;
-    private Button mThirdPersonButton;
-    private Button mTopDownButton;
 
     private int count;
     private int mPreviousPoseStatus;
-    private int mPointCount;
-    private float mDeltaTime;
     private float mPosePreviousTimeStamp;
     private float mXyIjPreviousTimeStamp;
     private float mCurrentTimeStamp;
-    private float mPointCloudFrameDelta;
-    private String mServiceVersion;
     private boolean mIsTangoServiceConnected;
     private TangoPoseData mPose;
 
@@ -116,36 +104,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
 
         @Override
         public void onUxExceptionEvent(UxExceptionEvent uxExceptionEvent) {
-            if(uxExceptionEvent.getType() == UxExceptionEvent.TYPE_LYING_ON_SURFACE){
-                Log.i(TAG, "Device lying on surface ");
-            }
-            if(uxExceptionEvent.getType() == UxExceptionEvent.TYPE_FEW_DEPTH_POINTS){
-                Log.i(TAG, "Very few depth points in point cloud " );
-            }
-            if(uxExceptionEvent.getType() == UxExceptionEvent.TYPE_FEW_FEATURES){
-                Log.i(TAG, "Invalid poses in MotionTracking ");
-            }
-            if(uxExceptionEvent.getType() == UxExceptionEvent.TYPE_INCOMPATIBLE_VM){
-                Log.i(TAG, "Device not running on ART");
-            }
-            if(uxExceptionEvent.getType() == UxExceptionEvent.TYPE_MOTION_TRACK_INVALID){
-                Log.i(TAG, "Invalid poses in MotionTracking ");
-            }
-            if(uxExceptionEvent.getType() == UxExceptionEvent.TYPE_MOVING_TOO_FAST){
-                Log.i(TAG, "Invalid poses in MotionTracking ");
-            }
-            if(uxExceptionEvent.getType() == UxExceptionEvent.TYPE_OVER_EXPOSED){
-                Log.i(TAG, "Camera Over Exposed");
-            }
-            if(uxExceptionEvent.getType() == UxExceptionEvent.TYPE_TANGO_SERVICE_NOT_RESPONDING){
-                Log.i(TAG, "TangoService is not responding ");
-            }
-            if(uxExceptionEvent.getType() == UxExceptionEvent.TYPE_TANGO_UPDATE_NEEDED){
-                Log.i(TAG, "Device not running on ART");
-            }
-            if(uxExceptionEvent.getType() == UxExceptionEvent.TYPE_UNDER_EXPOSED){
-                Log.i(TAG, "Camera Under Exposed " );
-            }
 
         }
     };
@@ -156,24 +114,8 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         setContentView(R.layout.activity_jpoint_cloud);
         setTitle(R.string.app_name);
 
-        mPoseTextView = (TextView) findViewById(R.id.pose);
-        mQuatTextView = (TextView) findViewById(R.id.quat);
-        mPoseCountTextView = (TextView) findViewById(R.id.posecount);
-        mDeltaTextView = (TextView) findViewById(R.id.deltatime);
-        mTangoEventTextView = (TextView) findViewById(R.id.tangoevent);
-        mPoseStatusTextView = (TextView) findViewById(R.id.status);
-        mPointCountTextView = (TextView) findViewById(R.id.pointCount);
-        mTangoServiceVersionTextView = (TextView) findViewById(R.id.version);
-        mApplicationVersionTextView = (TextView) findViewById(R.id.appversion);
         mAverageZTextView = (TextView) findViewById(R.id.averageZ);
-        mFrequencyTextView = (TextView) findViewById(R.id.frameDelta);
 
-        mFirstPersonButton = (Button) findViewById(R.id.first_person_button);
-        mFirstPersonButton.setOnClickListener(this);
-        mThirdPersonButton = (Button) findViewById(R.id.third_person_button);
-        mThirdPersonButton.setOnClickListener(this);
-        mTopDownButton = (Button) findViewById(R.id.top_down_button);
-        mTopDownButton.setOnClickListener(this);
         mTango = new Tango(this);
         mConfig = new TangoConfig();
         mConfig = mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
@@ -191,17 +133,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         mGLView.setEGLContextClientVersion(2);
         mGLView.setRenderer(mRenderer);
 
-        PackageInfo packageInfo;
-        try {
-            packageInfo = this.getPackageManager().getPackageInfo(this.getPackageName(), 0);
-            mApplicationVersionTextView.setText(packageInfo.versionName);
-        } catch (NameNotFoundException e) {
-            e.printStackTrace();
-        }
-
-        // Display the version of Tango Service
-        mServiceVersion = mConfig.getString("tango_service_library_version");
-        mTangoServiceVersionTextView.setText(mServiceVersion);
         mIsTangoServiceConnected = false;
         startUIThread();
     }
@@ -340,16 +271,13 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                 // the data.
                 synchronized (poseLock) {
                     mPose = pose;
-                    // Calculate the delta time from previous pose.
-                    mDeltaTime = (float) (pose.timestamp - mPosePreviousTimeStamp)
-                            * SECS_TO_MILLISECS;
                     mPosePreviousTimeStamp = (float) pose.timestamp;
                     if (mPreviousPoseStatus != pose.statusCode) {
                         count = 0;
                     }
                     count++;
                     mPreviousPoseStatus = pose.statusCode;
-                    if(!mRenderer.isValid()){
+                    if (!mRenderer.isValid()) {
                         return;
                     }
                     mRenderer.getModelMatCalculator().updateModelMatrix(
@@ -359,7 +287,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
 
             @Override
             public void onXyzIjAvailable(final TangoXyzIjData xyzIj) {
-                if(mTangoUx!=null){
+                if (mTangoUx != null) {
                     mTangoUx.updateXyzCount(xyzIj.xyzCount);
                 }
                 // Make sure to have atomic access to TangoXyzIjData so that
@@ -367,23 +295,33 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                 // the point cloud data.
                 synchronized (depthLock) {
                     mCurrentTimeStamp = (float) xyzIj.timestamp;
-                    mPointCloudFrameDelta = (mCurrentTimeStamp - mXyIjPreviousTimeStamp)
-                            * SECS_TO_MILLISECS;
                     mXyIjPreviousTimeStamp = mCurrentTimeStamp;
                     try {
                         TangoPoseData pointCloudPose = mTango.getPoseAtTime(mCurrentTimeStamp,
-                             framePairs.get(0));
-                        mPointCount = xyzIj.xyzCount;
-                        if(!mRenderer.isValid()){
+                                framePairs.get(0));
+                        if (!mRenderer.isValid()) {
                             return;
                         }
                         mRenderer.getPointCloud().UpdatePoints(xyzIj.xyz);
+                        // Average all the z values
+                        int count = xyzIj.xyzCount;
+                        float totalDistance = 0;
+                        FloatBuffer pts = xyzIj.xyz;
+                        for (int i = 0; i < count; i++) {
+                            totalDistance += pts.get(((i + 1) * 3) - 1);
+                        }
+                        float avgDistance = totalDistance / count;
+                        Log.i("LOOK HERE", "Average distance is " + avgDistance);
+
+
+                        //Log.i("LOOK HERE", "First point is: "+pts.get(0) +", "+pts.get(1)+", "+pts.get(2));
+                        //Log.i("LOOK HERE", "CHECK: "+xyzIj.xyz);
                         mRenderer.getModelMatCalculator().updatePointCloudModelMatrix(
-                                        pointCloudPose.getTranslationAsFloats(),
-                                        pointCloudPose.getRotationAsFloats());
+                                pointCloudPose.getTranslationAsFloats(),
+                                pointCloudPose.getRotationAsFloats());
                         mRenderer.getPointCloud().setModelMatrix(
                                 mRenderer.getModelMatCalculator().getPointCloudModelMatrixCopy());
-                      } catch (TangoErrorException e) {
+                    } catch (TangoErrorException e) {
                         Toast.makeText(getApplicationContext(), R.string.TangoError,
                                 Toast.LENGTH_SHORT).show();
                     } catch (TangoInvalidException e) {
@@ -395,15 +333,10 @@ public class PointCloudActivity extends Activity implements OnClickListener {
 
             @Override
             public void onTangoEvent(final TangoEvent event) {
-                if(mTangoUx!=null){
+                if (mTangoUx != null) {
                     mTangoUx.onTangoEvent(event);
                 }
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        mTangoEventTextView.setText(event.eventKey + ": " + event.eventValue);
-                    }
-                });
+
             }
 
             @Override
@@ -412,6 +345,32 @@ public class PointCloudActivity extends Activity implements OnClickListener {
             }
         });
     }
+
+
+    // Play a sound given the distance from the users (in meters)
+    // distance is probably between 0 & 5
+    private void playSound(float distance) {
+        final MediaPlayer mp = new MediaPlayer();
+
+        if(mp.isPlaying())
+        {
+            mp.stop();
+        }
+
+        try {
+            mp.reset();
+            AssetFileDescriptor afd;
+            afd = getAssets().openFd("AudioFile.mp3");
+            mp.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(),afd.getLength());
+            mp.prepare();
+            mp.start();
+        } catch (IllegalStateException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     /**
      * Create a separate thread to update Log information on UI at the specified interval of
@@ -434,36 +393,10 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                                     if (mPose == null) {
                                         return;
                                     }
-                                    String translationString = "["
-                                            + threeDec.format(mPose.translation[0]) + ", "
-                                            + threeDec.format(mPose.translation[1]) + ", "
-                                            + threeDec.format(mPose.translation[2]) + "] ";
-                                    String quaternionString = "["
-                                            + threeDec.format(mPose.rotation[0]) + ", "
-                                            + threeDec.format(mPose.rotation[1]) + ", "
-                                            + threeDec.format(mPose.rotation[2]) + ", "
-                                            + threeDec.format(mPose.rotation[3]) + "] ";
 
-                                    // Display pose data on screen in TextViews
-                                    mPoseTextView.setText(translationString);
-                                    mQuatTextView.setText(quaternionString);
-                                    mPoseCountTextView.setText(Integer.toString(count));
-                                    mDeltaTextView.setText(threeDec.format(mDeltaTime));
-                                    if (mPose.statusCode == TangoPoseData.POSE_VALID) {
-                                        mPoseStatusTextView.setText(R.string.pose_valid);
-                                    } else if (mPose.statusCode == TangoPoseData.POSE_INVALID) {
-                                        mPoseStatusTextView.setText(R.string.pose_invalid);
-                                    } else if (mPose.statusCode == TangoPoseData.POSE_INITIALIZING) {
-                                        mPoseStatusTextView.setText(R.string.pose_initializing);
-                                    } else if (mPose.statusCode == TangoPoseData.POSE_UNKNOWN) {
-                                        mPoseStatusTextView.setText(R.string.pose_unknown);
-                                    }
                                 }
                                 synchronized (depthLock) {
                                     // Display number of points in the point cloud
-                                    mPointCountTextView.setText(Integer.toString(mPointCount));
-                                    mFrequencyTextView.setText(""
-                                            + threeDec.format(mPointCloudFrameDelta));
                                     mAverageZTextView.setText(""
                                             + threeDec.format(mRenderer.getPointCloud()
                                                     .getAverageZ()));
