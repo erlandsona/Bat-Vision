@@ -349,8 +349,8 @@ public class PointCloudActivity extends Activity {
             // 0 -> 1; 5 -> 0
             // 1 - (Math.min(distance,5))/maxDistance
             int maxDistance = 3;
-            float volume = 1 - (Math.min(distance, 5)/maxDistance);
-            Log.i("AUDIO", "Setting volume to "+volume);
+            float volume = 1 - (Math.min(distance, maxDistance)/maxDistance);
+            Log.i("AUDIO", "Setting volume to "+volume+" (distance is "+distance+")");
             mp.setVolume(volume, volume);
         } catch (IllegalStateException e) {
             e.printStackTrace();
