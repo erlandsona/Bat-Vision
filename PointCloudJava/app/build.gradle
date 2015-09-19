@@ -4,6 +4,7 @@ android {
     compileSdkVersion 19
     buildToolsVersion "21.1.2"
 
+
     defaultConfig {
         applicationId "com.projecttango.experiments.javapointcloud"
         minSdkVersion 19
@@ -37,10 +38,13 @@ if (project.hasProperty("Tango.catkin_devel_prefix")) {
 }
 
 dependencies {
+    compile 'com.google.android.gms:play-services-analytics:7.3.0'
     compile fileTree(dir: external_lib_prefix + '/jar', include: ['**/*.jar'])
     compile(name: 'TangoUtils', ext: 'aar')
     compile (name: 'tango-ux-support-library', ext: 'aar')
 }
+
+apply plugin: 'com.google.gms.google-services'
 
 repositories{
     flatDir{
