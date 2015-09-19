@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.projecttango.experiments.javapointcloud;
+package com.bluedangertango.batvision;
 
 import com.google.atap.tango.ux.UxExceptionEvent;
 import com.google.atap.tango.ux.UxExceptionEventListener;
@@ -31,7 +31,8 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 
 import com.google.atap.tango.ux.TangoUx;
 import com.google.atap.tango.ux.TangoUxLayout;
-import com.projecttango.tangoutils.renderables.PointCloud;
+import com.projecttango.batvision.R;
+
 import android.graphics.Color;
 
 
@@ -45,10 +46,7 @@ import android.widget.Toast;
 
 // Playing audio
 import android.media.MediaPlayer;
-import android.content.res.AssetFileDescriptor;
 
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -121,7 +119,6 @@ public class PointCloudActivity extends Activity {
         mp = MediaPlayer.create(PointCloudActivity.this,R.raw.whitenoise);
         mp.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
             public void onPrepared(MediaPlayer player) {
-                Log.i("LOOK HERE", "MEDIA IS READY");
                 mediaReady = true;
                 mp.setLooping(true); // This may not work???
                 mp.start();
@@ -169,14 +166,14 @@ public class PointCloudActivity extends Activity {
                     Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_MOTION_TRACKING),
                     Tango.TANGO_INTENT_ACTIVITYCODE);
         }
-        Log.i(TAG, "onResumed");
+        //Log.i(TAG, "onResumed");
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         // Check which request we're responding to
         if (requestCode == Tango.TANGO_INTENT_ACTIVITYCODE) {
-            Log.i(TAG, "Triggered");
+            //Log.i(TAG, "Triggered");
             // Make sure the request was successful
             if (resultCode == RESULT_CANCELED) {
                 Toast.makeText(this, R.string.motiontrackingpermission, Toast.LENGTH_LONG).show();
@@ -276,8 +273,6 @@ public class PointCloudActivity extends Activity {
                 synchronized (depthLock) {
                     mCurrentTimeStamp = (float) xyzIj.timestamp;
 
-                    Log.i("LOOK HERE", "Tdelta " + (mCurrentTimeStamp - mXyIjPreviousTimeStamp));
-
                     mXyIjPreviousTimeStamp = mCurrentTimeStamp;
                     try {
                         // Average all the z values
@@ -359,7 +354,7 @@ public class PointCloudActivity extends Activity {
             // 1 - (Math.min(distance,5))/maxDistance
             int maxDistance = 3;
             float volume = 1 - (Math.min(distance, maxDistance)/maxDistance);
-            Log.i("AUDIO", "Setting volume to "+volume+" (distance is "+distance+")");
+            //Log.i("AUDIO", "Setting volume to "+volume+" (distance is "+distance+")");
             mp.setVolume(volume, volume);
         } catch (IllegalStateException e) {
             e.printStackTrace();

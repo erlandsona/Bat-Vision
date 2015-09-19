@@ -6,7 +6,7 @@ android {
 
 
     defaultConfig {
-        applicationId "com.projecttango.experiments.javapointcloud"
+        applicationId "com.bluedangertango.batvision"
         minSdkVersion 19
         targetSdkVersion 19
         versionCode 1

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.projecttango.experiments.javapointcloud;
+package com.bluedangertango.batvision;
 
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
