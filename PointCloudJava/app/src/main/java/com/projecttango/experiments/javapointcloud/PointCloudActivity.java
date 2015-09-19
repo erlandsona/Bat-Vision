@@ -63,6 +63,7 @@ public class PointCloudActivity extends Activity {
     private Tango mTango;
     private TangoConfig mConfig;
     int maxDepthPoints;
+    float currentDistance = 0;
 
     private TextView mAverageZTextView;
 
@@ -77,6 +78,8 @@ public class PointCloudActivity extends Activity {
 
     private TangoUx mTangoUx;
     private TangoUxLayout mTangoUxLayout;
+
+    private TextView banner;
 
     private static final int UPDATE_INTERVAL_MS = 100;
     public static Object poseLock = new Object();
@@ -105,6 +108,8 @@ public class PointCloudActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_jpoint_cloud);
         setTitle(R.string.app_name);
+        banner = (TextView) findViewById(R.id.banner);
+        banner.setText(R.string.close_msg);
 
         mTango = new Tango(this);
         mConfig = new TangoConfig();
@@ -263,7 +268,7 @@ public class PointCloudActivity extends Activity {
                             totalDistance += pts.get(((i + 1) * 3) - 1);
                         }
                         float avgDistance = totalDistance / count;
-                        onDistanceKnown(avgDistance);
+                        currentDistance = avgDistance;
                         Log.i("LOOK HERE", "Average distance is " + avgDistance);
 
                     } catch (TangoErrorException e) {
@@ -297,11 +302,20 @@ public class PointCloudActivity extends Activity {
         this.updateGui(distance);
     }
 
-    private void updateGui(float distanc) {
+    private void updateGui(float distance) {
         // Update the background color
         // TODO
         // Update the text
-        // TODO
+
+        int text = R.string.far_msg;
+        if (distance < 1) {
+            text = R.string.close_msg;
+        } else if (distance < 3) {
+            text = R.string.medium_msg;
+        }
+
+        // Set the text
+        banner.setText(text);
     }
 
     // Play a sound given the distance from the users (in meters)
@@ -350,6 +364,7 @@ public class PointCloudActivity extends Activity {
                                     if (mPose == null) {
                                         return;
                                     }
+                                    onDistanceKnown(currentDistance);
 
                                 }
                             }
