@@ -331,10 +331,14 @@ public class PointCloudActivity extends Activity {
         try {
             mp.reset();
             AssetFileDescriptor afd;
-            afd = getAssets().openFd("AudioFile.mp3");
+            afd = getAssets().openFd("White-Noise.mp3");
             mp.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(),afd.getLength());
             mp.prepare();
+            mp.setLooping(true) // This may not work???
             mp.start();
+            int maxVolume = 5;
+            float log1=(float)(Math.log(maxVolume-distance)/Math.log(maxVolume));
+            mp.setVolume(1-log1);
         } catch (IllegalStateException e) {
             e.printStackTrace();
         } catch (IOException e) {
