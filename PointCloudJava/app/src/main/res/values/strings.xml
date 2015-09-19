@@ -16,7 +16,11 @@
 -->
 <resources>
 
-    <string name="app_name">Project Tango Java Point Cloud</string>
+    <string name="app_name">Bat Vision</string>
+    <string name="far_msg">All\'s Quiet</string>
+    <string name="medium_msg">Something\'s afoot!</string>
+    <string name="close_msg">Duck and Cover!</string>
+
     <string name="menu_name">Java Point Cloud</string>
     <string name="vertex_count">Number of points:</string>
     <string name="serviceversion">Tango service version:</string>

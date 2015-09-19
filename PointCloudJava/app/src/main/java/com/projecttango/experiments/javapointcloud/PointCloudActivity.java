@@ -31,19 +31,13 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 
 import com.google.atap.tango.ux.TangoUx;
 import com.google.atap.tango.ux.TangoUxLayout;
+import com.projecttango.tangoutils.renderables.PointCloud;
 
 
 import android.app.Activity;
 import android.content.Intent;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager.NameNotFoundException;
-import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.MotionEvent;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -62,15 +56,13 @@ import java.util.ArrayList;
  * service and propagation of Tango XyzIj data to OpenGL and Layout views. OpenGL rendering logic is
  * delegated to the {@link PCrenderer} class.
  */
-public class PointCloudActivity extends Activity implements OnClickListener {
+public class PointCloudActivity extends Activity {
 
     private static final String TAG = PointCloudActivity.class.getSimpleName();
     private static final int SECS_TO_MILLISECS = 1000;
     private Tango mTango;
     private TangoConfig mConfig;
-
-    private PCRenderer mRenderer;
-    private GLSurfaceView mGLView;
+    int maxDepthPoints;
 
     private TextView mAverageZTextView;
 
@@ -114,8 +106,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         setContentView(R.layout.activity_jpoint_cloud);
         setTitle(R.string.app_name);
 
-        mAverageZTextView = (TextView) findViewById(R.id.averageZ);
-
         mTango = new Tango(this);
         mConfig = new TangoConfig();
         mConfig = mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
@@ -127,11 +117,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         mTangoUx.setUxExceptionEventListener(mUxExceptionListener);
 
 
-        int maxDepthPoints = mConfig.getInt("max_point_cloud_elements");
-        mRenderer = new PCRenderer(maxDepthPoints);
-        mGLView = (GLSurfaceView) findViewById(R.id.gl_surface_view);
-        mGLView.setEGLContextClientVersion(2);
-        mGLView.setRenderer(mRenderer);
+        maxDepthPoints = mConfig.getInt("max_point_cloud_elements");
 
         mIsTangoServiceConnected = false;
         startUIThread();
@@ -200,28 +186,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         super.onDestroy();
     }
 
-    @Override
-    public void onClick(View v) {
-        switch (v.getId()) {
-        case R.id.first_person_button:
-            mRenderer.setFirstPersonView();
-            break;
-        case R.id.third_person_button:
-            mRenderer.setThirdPersonView();
-            break;
-        case R.id.top_down_button:
-            mRenderer.setTopDownView();
-            break;
-        default:
-            Log.w(TAG, "Unrecognized button click.");
-            return;
-        }
-    }
-
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        return mRenderer.onTouchEvent(event);
-    }
 
     private void setUpExtrinsics() {
         // Set device to imu matrix in Model Matrix Calculator.
@@ -234,8 +198,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         } catch (TangoErrorException e) {
             Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT).show();
         }
-        mRenderer.getModelMatCalculator().SetDevice2IMUMatrix(
-                device2IMUPose.getTranslationAsFloats(), device2IMUPose.getRotationAsFloats());
 
         // Set color camera to imu matrix in Model Matrix Calculator.
         TangoPoseData color2IMUPose = new TangoPoseData();
@@ -247,8 +209,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         } catch (TangoErrorException e) {
             Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT).show();
         }
-        mRenderer.getModelMatCalculator().SetColorCamera2IMUMatrix(
-                color2IMUPose.getTranslationAsFloats(), color2IMUPose.getRotationAsFloats());
     }
 
     private void setTangoListeners() {
@@ -277,11 +237,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                     }
                     count++;
                     mPreviousPoseStatus = pose.statusCode;
-                    if (!mRenderer.isValid()) {
-                        return;
-                    }
-                    mRenderer.getModelMatCalculator().updateModelMatrix(
-                            pose.getTranslationAsFloats(), pose.getRotationAsFloats());
                 }
             }
 
@@ -299,10 +254,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                     try {
                         TangoPoseData pointCloudPose = mTango.getPoseAtTime(mCurrentTimeStamp,
                                 framePairs.get(0));
-                        if (!mRenderer.isValid()) {
-                            return;
-                        }
-                        mRenderer.getPointCloud().UpdatePoints(xyzIj.xyz);
+
                         // Average all the z values
                         int count = xyzIj.xyzCount;
                         float totalDistance = 0;
@@ -311,16 +263,9 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                             totalDistance += pts.get(((i + 1) * 3) - 1);
                         }
                         float avgDistance = totalDistance / count;
+                        onDistanceKnown(avgDistance);
                         Log.i("LOOK HERE", "Average distance is " + avgDistance);
 
-
-                        //Log.i("LOOK HERE", "First point is: "+pts.get(0) +", "+pts.get(1)+", "+pts.get(2));
-                        //Log.i("LOOK HERE", "CHECK: "+xyzIj.xyz);
-                        mRenderer.getModelMatCalculator().updatePointCloudModelMatrix(
-                                pointCloudPose.getTranslationAsFloats(),
-                                pointCloudPose.getRotationAsFloats());
-                        mRenderer.getPointCloud().setModelMatrix(
-                                mRenderer.getModelMatCalculator().getPointCloudModelMatrixCopy());
                     } catch (TangoErrorException e) {
                         Toast.makeText(getApplicationContext(), R.string.TangoError,
                                 Toast.LENGTH_SHORT).show();
@@ -346,6 +291,18 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         });
     }
 
+
+    private void onDistanceKnown(float distance) {
+        this.playSound(distance);
+        this.updateGui(distance);
+    }
+
+    private void updateGui(float distanc) {
+        // Update the background color
+        // TODO
+        // Update the text
+        // TODO
+    }
 
     // Play a sound given the distance from the users (in meters)
     // distance is probably between 0 & 5
@@ -394,12 +351,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                                         return;
                                     }
 
-                                }
-                                synchronized (depthLock) {
-                                    // Display number of points in the point cloud
-                                    mAverageZTextView.setText(""
-                                            + threeDec.format(mRenderer.getPointCloud()
-                                                    .getAverageZ()));
                                 }
                             }
                         });
