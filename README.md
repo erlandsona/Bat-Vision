@@ -1,3 +1,7 @@
+# Bat Vision
+
+## Google Project Tango Hackathon Depth Perception Experiment
+
 Project Tango Java API Example Projects
 ===========================================
 Copyright (C) 2014 Google Inc.
@@ -49,3 +53,4 @@ use Github pull requests for this purpose.
 #### The small print
 Contributions made by corporations are covered by a different agreement than
 the one above, the Software Grant and Corporate Contributor License Agreement.
+>>>>>>> 53efc9cd698f95773afec0ef499768d2e3f1b121
