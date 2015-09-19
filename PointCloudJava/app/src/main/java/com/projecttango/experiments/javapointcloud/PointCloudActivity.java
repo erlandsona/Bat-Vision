@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 
 /**
  * Main Activity class for the Point Cloud Sample. Handles the connection to the {@link Tango}
@@ -66,7 +67,9 @@ public class PointCloudActivity extends Activity {
     private TangoConfig mConfig;
     int maxDepthPoints;
     float currentDistance = 0;
-    float tmpCurDistBuffer;
+    int maxBufferSamples = 5;
+    ArrayList<Float> tmpCurDistBuffer = new ArrayList<Float>(Collections.nCopies(maxBufferSamples, 0f));
+    int bufferPos = 0;
 
     private TextView mAverageZTextView;
 
@@ -272,11 +275,11 @@ public class PointCloudActivity extends Activity {
                 // the point cloud data.
                 synchronized (depthLock) {
                     mCurrentTimeStamp = (float) xyzIj.timestamp;
+
+                    Log.i("LOOK HERE", "Tdelta " + (mCurrentTimeStamp - mXyIjPreviousTimeStamp));
+
                     mXyIjPreviousTimeStamp = mCurrentTimeStamp;
                     try {
-                        TangoPoseData pointCloudPose = mTango.getPoseAtTime(mCurrentTimeStamp,
-                                framePairs.get(0));
-
                         // Average all the z values
                         int count = xyzIj.xyzCount;
                         float totalDistance = 0;
@@ -284,9 +287,15 @@ public class PointCloudActivity extends Activity {
                         for (int i = 0; i < count; i++) {
                             totalDistance += pts.get(((i + 1) * 3) - 1);
                         }
+                        //totalDistance = pts.get(3);
                         float avgDistance = totalDistance / count;
-                        currentDistance = avgDistance;
-                        Log.i("LOOK HERE", "Average distance is " + avgDistance);
+                        tmpCurDistBuffer.set(bufferPos, avgDistance);
+                        bufferPos++;
+                        if (bufferPos >= maxBufferSamples-1)
+                            bufferPos = 0;
+                        currentDistance = getMedian(tmpCurDistBuffer);
+
+                        //Log.i("LOOK HERE", "Average distance is " + avgDistance);
 
                     } catch (TangoErrorException e) {
                         Toast.makeText(getApplicationContext(), R.string.TangoError,
@@ -368,6 +377,10 @@ public class PointCloudActivity extends Activity {
         return Color.HSVToColor(hsv);
     }
 
+    private float getMedian(ArrayList<Float> data) {
+        Collections.sort(data);
+        return data.get(data.size()/2);
+    }
 
     /**
      * Create a separate thread to update Log information on UI at the specified interval of
