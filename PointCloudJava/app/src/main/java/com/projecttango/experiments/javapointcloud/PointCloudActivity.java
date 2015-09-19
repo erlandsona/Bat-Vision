@@ -66,6 +66,8 @@ public class PointCloudActivity extends Activity {
 
     private TextView mAverageZTextView;
 
+    MediaPlayer mp = null;
+    boolean mediaReady = false;
 
     private int count;
     private int mPreviousPoseStatus;
@@ -105,6 +107,15 @@ public class PointCloudActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_jpoint_cloud);
         setTitle(R.string.app_name);
+        mp = MediaPlayer.create(PointCloudActivity.this,R.raw.whitenoise);
+        mp.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+            public void onPrepared(MediaPlayer player) {
+                Log.i("LOOK HERE", "MEDIA IS READY");
+                mediaReady = true;
+                mp.setLooping(true); // This may not work???
+                mp.start();
+            }
+        });
 
         mTango = new Tango(this);
         mConfig = new TangoConfig();
@@ -264,7 +275,7 @@ public class PointCloudActivity extends Activity {
                         }
                         float avgDistance = totalDistance / count;
                         onDistanceKnown(avgDistance);
-                        Log.i("LOOK HERE", "Average distance is " + avgDistance);
+                        //Log.i("LOOK HERE", "Average distance is " + avgDistance);
 
                     } catch (TangoErrorException e) {
                         Toast.makeText(getApplicationContext(), R.string.TangoError,
@@ -307,27 +318,24 @@ public class PointCloudActivity extends Activity {
     // Play a sound given the distance from the users (in meters)
     // distance is probably between 0 & 5
     private void playSound(float distance) {
-        final MediaPlayer mp = new MediaPlayer();
+
+        if (!mediaReady) {
+            return;
+        }
 
         if(mp.isPlaying())
         {
-            mp.stop();
+           // mp.stop();
         }
 
         try {
-            mp.reset();
-            AssetFileDescriptor afd;
-            afd = getAssets().openFd("White-Noise.mp3");
-            mp.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(),afd.getLength());
-            mp.prepare();
-            mp.setLooping(true) // This may not work???
-            mp.start();
-            int maxVolume = 5;
-            float log1=(float)(Math.log(maxVolume-distance)/Math.log(maxVolume));
-            mp.setVolume(1-log1);
+            // 0 -> 1; 5 -> 0
+            // 1 - (Math.min(distance,5))/maxDistance
+            int maxDistance = 3;
+            float volume = 1 - (Math.min(distance, 5)/maxDistance);
+            Log.i("AUDIO", "Setting volume to "+volume);
+            mp.setVolume(volume, volume);
         } catch (IllegalStateException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
             e.printStackTrace();
         }
     }
