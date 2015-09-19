@@ -32,12 +32,14 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 import com.google.atap.tango.ux.TangoUx;
 import com.google.atap.tango.ux.TangoUxLayout;
 import com.projecttango.tangoutils.renderables.PointCloud;
+import android.graphics.Color;
 
 
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -63,6 +65,8 @@ public class PointCloudActivity extends Activity {
     private Tango mTango;
     private TangoConfig mConfig;
     int maxDepthPoints;
+    float currentDistance = 0;
+    float tmpCurDistBuffer;
 
     private TextView mAverageZTextView;
 
@@ -80,9 +84,13 @@ public class PointCloudActivity extends Activity {
     private TangoUx mTangoUx;
     private TangoUxLayout mTangoUxLayout;
 
+    private TextView banner;
+    private RelativeLayout mBackground;
+
     private static final int UPDATE_INTERVAL_MS = 100;
     public static Object poseLock = new Object();
     public static Object depthLock = new Object();
+
 
 
     /*
@@ -116,6 +124,9 @@ public class PointCloudActivity extends Activity {
                 mp.start();
             }
         });
+        banner = (TextView) findViewById(R.id.banner);
+
+        mBackground = (RelativeLayout) findViewById(R.id.container);
 
         mTango = new Tango(this);
         mConfig = new TangoConfig();
@@ -274,8 +285,8 @@ public class PointCloudActivity extends Activity {
                             totalDistance += pts.get(((i + 1) * 3) - 1);
                         }
                         float avgDistance = totalDistance / count;
-                        onDistanceKnown(avgDistance);
-                        //Log.i("LOOK HERE", "Average distance is " + avgDistance);
+                        currentDistance = avgDistance;
+                        Log.i("LOOK HERE", "Average distance is " + avgDistance);
 
                     } catch (TangoErrorException e) {
                         Toast.makeText(getApplicationContext(), R.string.TangoError,
@@ -308,11 +319,22 @@ public class PointCloudActivity extends Activity {
         this.updateGui(distance);
     }
 
-    private void updateGui(float distanc) {
+    private void updateGui(float distance) {
         // Update the background color
-        // TODO
+        int color = getColor(distance);
+        mBackground.setBackgroundColor(color);
+
+
         // Update the text
-        // TODO
+        int text = R.string.far_msg;
+        if (distance < 1) {
+            text = R.string.close_msg;
+        } else if (distance < 3) {
+            text = R.string.medium_msg;
+        }
+
+        // Set the text
+        banner.setText(text);
     }
 
     // Play a sound given the distance from the users (in meters)
@@ -321,11 +343,6 @@ public class PointCloudActivity extends Activity {
 
         if (!mediaReady) {
             return;
-        }
-
-        if(mp.isPlaying())
-        {
-           // mp.stop();
         }
 
         try {
@@ -338,6 +355,17 @@ public class PointCloudActivity extends Activity {
         } catch (IllegalStateException e) {
             e.printStackTrace();
         }
+    }
+
+    // generate a color based on the distance
+    private int getColor(float distance) {
+        // We want to color to go from red to blue depending on the distance (0-240)
+        if (distance > 5)
+            distance = 5;
+        float hue = distance * 240.0f/5.0f;
+        
+        float[] hsv = {hue, 1.0f, 1.0f};
+        return Color.HSVToColor(hsv);
     }
 
 
@@ -362,6 +390,7 @@ public class PointCloudActivity extends Activity {
                                     if (mPose == null) {
                                         return;
                                     }
+                                    onDistanceKnown(currentDistance);
 
                                 }
                             }
