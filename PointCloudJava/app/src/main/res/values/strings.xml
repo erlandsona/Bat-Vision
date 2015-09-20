@@ -21,7 +21,7 @@
     <string name="medium_msg">Something\'s afoot!</string>
     <string name="close_msg">Duck and Cover!</string>
 
-    <string name="menu_name">Java Point Cloud</string>
+    <string name="menu_name">Bat Vision</string>
     <string name="vertex_count">Number of points:</string>
     <string name="serviceversion">Tango service version:</string>
     <string name="appversion">"App version: "</string>

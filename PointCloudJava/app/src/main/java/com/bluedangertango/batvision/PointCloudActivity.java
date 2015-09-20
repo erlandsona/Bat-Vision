@@ -357,7 +357,7 @@ public class PointCloudActivity extends Activity {
             // 1 - (Math.min(distance,5))/maxDistance
             int maxDistance = 3;
             targetVolume = 1 - (Math.min(distance, maxDistance)/maxDistance);
-            Log.i("AUDIO", "Setting targetVolume to "+targetVolume+" (distance is "+distance+")");
+            //Log.i("AUDIO", "Setting targetVolume to "+targetVolume+" (distance is "+distance+")");
             float dv = 0.025f;
             float diff = Math.abs(targetVolume - currentVolume);
             int iterations = (int) (diff/dv);
